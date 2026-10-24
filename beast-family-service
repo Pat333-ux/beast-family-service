@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract FamilyAgreement {
+    struct Agreement {
+        bytes32 caseIdentifier;
+        address primaryGuardian;
+        address secondaryGuardian;
+        bool active;
+        uint256 lastUpdated;
+    }
+
+    mapping(bytes32 => Agreement) public agreements;
+    mapping(bytes32 => string[]) public mediationMilestones;
+
+    event AgreementRegistered(bytes32 indexed caseIdentifier, address primary, address secondary);
+    event MilestoneLogged(bytes32 indexed caseIdentifier, string milestone);
+
+    function registerAgreement(bytes32 _caseId, address _secondary) external {
+        require(agreements[_caseId].primaryGuardian == address(0), "Case already exists");
+        agreements[_caseId] = Agreement({
+            caseIdentifier: _caseId,
+            primaryGuardian: msg.sender,
+            secondaryGuardian: _secondary,
+            active: true,
+            lastUpdated: block.timestamp
+        });
+        emit AgreementRegistered(_caseId, msg.sender, _secondary);
+    }
+
+    function logMilestone(bytes32 _caseId, string calldata _milestone) external {
+        require(agreements[_caseId].active, "Agreement not active");
+        require(
+            msg.sender == agreements[_caseId].primaryGuardian || 
+            msg.sender == agreements[_caseId].secondaryGuardian,
+            "Unauthorized guardian"
+        );
+        mediationMilestones[_caseId].push(_milestone);
+        emit MilestoneLogged(_caseId, _milestone);
+    }
+}
